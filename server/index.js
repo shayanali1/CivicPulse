@@ -3,6 +3,16 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { db } = require('./db/client');
 
+// Import routes
+const authRoutes = require('./routes/auth');
+
+dotenv.config();
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
 // Test database connection on startup
 db.query('SELECT NOW()', (err, result) => {
   if (err) {
@@ -12,13 +22,10 @@ db.query('SELECT NOW()', (err, result) => {
   }
 });
 
-dotenv.config();
+// Routes
+app.use('/api/auth', authRoutes);
 
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
+// Health check route
 app.get('/', (req, res) => {
   res.json({ message: 'CivicPulse API is running!' });
 });
