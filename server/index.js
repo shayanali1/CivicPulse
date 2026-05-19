@@ -5,6 +5,7 @@ const { db } = require('./db/client');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const issueRoutes = require('./routes/issues');
 const { authenticateToken } = require('./middleware/auth');
 
 dotenv.config();
@@ -25,6 +26,7 @@ db.query('SELECT NOW()', (err, result) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/issues', issueRoutes);
 
 // Protected test route
 app.get('/api/protected', authenticateToken, (req, res) => {
