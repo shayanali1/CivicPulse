@@ -2,11 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { db } = require('./db/client');
+require('./workers/escalationEngine');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const issueRoutes = require('./routes/issues');
 const { authenticateToken } = require('./middleware/auth');
+const { runEscalationCheck } = require('./workers/escalationEngine');
 
 dotenv.config();
 
