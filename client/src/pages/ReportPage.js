@@ -43,6 +43,8 @@ export default function ReportPage() {
     title: '',
     category: '',
     description: '',
+    photo: null,
+    photoPreview: null,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,16 +75,26 @@ export default function ReportPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      
+      const data = new FormData();
+      data.append('title', formData.title);
+      data.append('description', formData.description);
+      data.append('category', formData.category);
+      data.append('lat', location.lat);
+      data.append('lng', location.lng);
+      if (formData.photo) {
+        data.append('photo', formData.photo);
+      }
+
       await axios.post(
         'http://localhost:5000/api/issues',
-        {
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          lat: location.lat,
-          lng: location.lng,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        data,
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          } 
+        }
       );
       navigate('/map');
     } catch (err) {
@@ -220,7 +232,7 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {/* Description */}
+             {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-[#c2c6d6] mb-2">Description (optional)</label>
                 <textarea
@@ -229,6 +241,54 @@ export default function ReportPage() {
                   placeholder="Describe the issue in detail..."
                   rows={4}
                   className="w-full bg-gray-50 dark:bg-[#0b1326] border border-gray-200 dark:border-[#424754] rounded-xl px-4 py-3 text-gray-900 dark:text-[#dae2fd] placeholder-gray-400 focus:border-blue-500 outline-none transition-colors resize-none"
+                />
+              </div>
+
+              {/* Photo Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-[#c2c6d6] mb-2">
+                  Photo (optional)
+                </label>
+                <div
+                  onClick={() => document.getElementById('photo-upload').click()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${formData.photoPreview ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-[#424754] hover:border-blue-400'}`}
+                >
+                  {formData.photoPreview ? (
+                    <div className="relative">
+                      <img src={formData.photoPreview} alt="Preview" className="max-h-48 mx-auto rounded-lg object-cover" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData({ ...formData, photo: null, photoPreview: null });
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-gray-400 text-[48px] block mb-2">add_photo_alternate</span>
+                      <p className="text-sm text-gray-500 dark:text-[#c2c6d6]">Click to upload a photo</p>
+                      <p className="text-xs text-gray-400 mt-1">JPEG, PNG or WebP — max 5MB</p>
+                    </>
+                  )}
+                </div>
+                <input
+                  id="photo-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setFormData({
+                        ...formData,
+                        photo: file,
+                        photoPreview: URL.createObjectURL(file)
+                      });
+                    }
+                  }}
                 />
               </div>
             </div>

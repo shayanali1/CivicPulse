@@ -266,6 +266,27 @@ const handleUpvote = async () => {
               </div>
             )}
           </div>
+          {/* Photo Gallery */}
+          {issue.photo_url && (
+            <div className="bg-white dark:bg-[#171f33] border border-gray-200 dark:border-[#424754] rounded-2xl p-8 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-[#dae2fd] mb-4 flex items-center gap-2" style={{ fontFamily: 'Hanken Grotesk' }}>
+                <span className="material-symbols-outlined text-blue-500">photo_library</span>
+                Photo Evidence
+              </h2>
+              <div className="rounded-xl overflow-hidden">
+                <img
+                  src={`http://localhost:5000${issue.photo_url}`}
+                  alt="Issue evidence"
+                  className="w-full max-h-96 object-cover rounded-xl hover:scale-105 transition-transform duration-300 cursor-zoom-in"
+                  onClick={() => window.open(`http://localhost:5000${issue.photo_url}`, '_blank')}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">info</span>
+                Click image to view full size
+              </p>
+            </div>
+          )}
 
           {/* Location Card */}
           <div className="bg-white dark:bg-[#171f33] border border-gray-200 dark:border-[#424754] rounded-2xl p-8 shadow-sm">

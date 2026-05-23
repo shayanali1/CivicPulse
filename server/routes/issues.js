@@ -162,6 +162,8 @@ router.get('/clusters', async (req, res) => {
 
 // GET /api/issues/:id - Get single issue with full details
 router.get('/:id', async (req, res) => {
+  // GET /api/issues/:id - Get single issue with full details
+router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -170,6 +172,7 @@ router.get('/:id', async (req, res) => {
         i.id, i.title, i.description, i.category, 
         i.status, i.upvote_count, i.escalation_level,
         i.is_publicly_flagged, i.created_at,
+        i.photo_url,
         ST_Y(i.location::geometry) AS lat,
         ST_X(i.location::geometry) AS lng,
         u.name AS reporter_name
@@ -201,7 +204,6 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 // POST /api/issues/:id/upvote
 router.post('/:id/upvote', authenticateToken, async (req, res) => {
   const { id } = req.params;
