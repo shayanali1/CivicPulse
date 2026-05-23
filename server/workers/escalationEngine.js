@@ -3,9 +3,9 @@ const { db } = require('../db/client');
 
 // SLA Rules — how long each status can sit before escalating
 const SLA_RULES = {
-  submitted: { maxDays: 3, nextStatus: 'under_review' },
-  under_review: { maxDays: 7, nextStatus: 'escalated_l1' },
-  escalated_l1: { maxDays: 14, nextStatus: 'escalated_l2' },
+  submitted:    { maxDays: 3,  nextStatus: 'under_review',  notifyRole: 'official' },
+  under_review: { maxDays: 7,  nextStatus: 'escalated_l1',  notifyRole: 'official' },
+  escalated_l1: { maxDays: 14, nextStatus: 'escalated_l2',  notifyRole: 'official' },
 };
 
 async function runEscalationCheck() {
@@ -48,9 +48,15 @@ async function runEscalationCheck() {
 }
 
 async function escalateIssue(issue, rule) {
+  // Get a client from the pool for transaction
+  const client = await db.connect();
+
   try {
-    // Update issue status
-    await db.query(
+    // BEGIN transaction — all queries must succeed or all fail
+    await client.query('BEGIN');
+
+    // 1. Update issue status atomically
+    await client.query(
       `UPDATE issues
        SET status = $1,
            last_status_changed_at = NOW(),
@@ -60,8 +66,8 @@ async function escalateIssue(issue, rule) {
       [rule.nextStatus, issue.id]
     );
 
-    // Log the escalation event in the timeline
-    await db.query(
+    // 2. Write to audit log
+    await client.query(
       `INSERT INTO issue_events
         (issue_id, event_type, old_status, new_status, triggered_by, note)
        VALUES ($1, 'auto_escalation', $2, $3, 'system', $4)`,
@@ -73,10 +79,40 @@ async function escalateIssue(issue, rule) {
       ]
     );
 
+    // 3. Find next assignee by role in the issue's geographic area
+    const nextAssignee = await client.query(
+      `SELECT u.id, u.name, u.email
+       FROM users u
+       JOIN area_assignments aa ON aa.user_id = u.id
+       WHERE u.role = $1
+         AND ST_Within(
+           $2::geometry,
+           aa.coverage_area
+         )
+       LIMIT 1`,
+      [rule.notifyRole, issue.location]
+    );
+
+    // 4. Assign to next official if found
+    if (nextAssignee.rows.length > 0) {
+      await client.query(
+        `UPDATE issues SET assigned_to = $1 WHERE id = $2`,
+        [nextAssignee.rows[0].id, issue.id]
+      );
+      console.log(`🔄 Reassigned to: ${nextAssignee.rows[0].name}`);
+    }
+
+    // COMMIT — everything succeeded
+    await client.query('COMMIT');
     console.log(`🚨 Escalated issue "${issue.title}" from ${issue.status} → ${rule.nextStatus}`);
 
   } catch (err) {
+    // ROLLBACK — something failed, undo everything
+    await client.query('ROLLBACK');
     console.error(`❌ Failed to escalate issue ${issue.id}:`, err.message);
+  } finally {
+    // Always release the client back to the pool
+    client.release();
   }
 }
 

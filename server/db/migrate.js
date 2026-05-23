@@ -1,4 +1,4 @@
-const { db } = require('./client');
+const { db } = require("./client");
 
 async function migrate() {
   try {
@@ -13,7 +13,7 @@ async function migrate() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
-    console.log('✅ Users table ready');
+    console.log("✅ Users table ready");
 
     // Create issues table
     await db.query(`
@@ -35,7 +35,7 @@ async function migrate() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
-    console.log('✅ Issues table ready');
+    console.log("✅ Issues table ready");
 
     // Create issue_events table
     await db.query(`
@@ -50,7 +50,7 @@ async function migrate() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
-    console.log('✅ Issue events table ready');
+    console.log("✅ Issue events table ready");
 
     // Create indexes for performance
     await db.query(`
@@ -62,13 +62,27 @@ async function migrate() {
       ON issues(status, last_status_changed_at) 
       WHERE is_resolved = false
     `);
-    console.log('✅ Indexes ready');
+    console.log("✅ Indexes ready");
+    // Create area_assignments table
+    await db.query(`
+  CREATE TABLE IF NOT EXISTS area_assignments (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID REFERENCES users(id),
+    coverage_area GEOMETRY(Polygon, 4326) NOT NULL
+  )
+`);
+    console.log("✅ Area assignments table ready");
 
-    console.log('🎉 Database migration complete!');
+    // Create GIST index for geographic queries
+    await db.query(`
+  CREATE INDEX IF NOT EXISTS idx_area_assignments_geom 
+  ON area_assignments USING GIST(coverage_area)
+`);
+    console.log("✅ Area assignments index ready");
+    console.log("🎉 Database migration complete!");
     process.exit(0);
-
   } catch (err) {
-    console.error('Migration failed:', err.message);
+    console.error("Migration failed:", err.message);
     process.exit(1);
   }
 }

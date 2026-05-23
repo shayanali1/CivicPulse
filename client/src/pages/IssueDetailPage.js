@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
 
@@ -27,6 +27,7 @@ const EVENT_CONFIG = {
 };
 
 export default function IssueDetailPage() {
+  const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
   const { id } = useParams();
   const [issue, setIssue] = useState(null);
@@ -50,14 +51,31 @@ export default function IssueDetailPage() {
     }
   };
 
-  const handleUpvote = () => {
-    if (upvoted) {
-      setUpvoteCount(upvoteCount - 1);
-    } else {
+const handleUpvote = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    navigate('/login');
+    return;
+  }
+
+  try {
+    const res = await axios.post(
+      `http://localhost:5000/api/issues/${id}/upvote`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (res.data.upvoted) {
       setUpvoteCount(upvoteCount + 1);
+      setUpvoted(true);
+    } else {
+      setUpvoteCount(upvoteCount - 1);
+      setUpvoted(false);
     }
-    setUpvoted(!upvoted);
-  };
+  } catch (err) {
+    console.error('Upvote failed:', err);
+  }
+};
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {

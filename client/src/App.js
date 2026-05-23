@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import MapPage from './pages/MapPage';
 import ReportPage from './pages/ReportPage';
 import IssueDetailPage from './pages/IssueDetailPage';
+import DashboardPage from './pages/DashboardPage';
 import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <Route path="/map" element={<MapPage />} />
           <Route path="/report" element={<ReportPage />} />
           <Route path="/issues/:id" element={<IssueDetailPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
         </Routes>
       </Router>
     </ThemeProvider>
