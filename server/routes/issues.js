@@ -10,16 +10,12 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
   const photo_url = req.file ? `/uploads/${req.file.filename}` : null;
 
   if (!title || !category || !lat || !lng) {
-    return res.status(400).json({ 
-      error: 'Title, category, latitude and longitude are required' 
-    });
+    return res.status(400).json({ error: 'Title, category, latitude and longitude are required' });
   }
 
   const validCategories = ['pothole', 'water', 'power', 'sewage', 'other'];
   if (!validCategories.includes(category)) {
-    return res.status(400).json({ 
-      error: 'Category must be one of: pothole, water, power, sewage, other' 
-    });
+    return res.status(400).json({ error: 'Category must be one of: pothole, water, power, sewage, other' });
   }
 
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -30,17 +26,13 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
     const result = await db.query(
       `INSERT INTO issues 
         (title, description, category, location, reporter_id, photo_url)
-       VALUES 
-        ($1, $2, $3, ST_GeogFromText($4), $5, $6)
-       RETURNING 
-        id, title, description, category, status, 
-        upvote_count, created_at, location, photo_url`,
+       VALUES ($1, $2, $3, ST_GeogFromText($4), $5, $6)
+       RETURNING id, title, description, category, status, upvote_count, created_at, location, photo_url`,
       [title, description, category, `POINT(${lng} ${lat})`, req.user.userId, photo_url]
     );
 
     const newIssue = result.rows[0];
 
-    // Find ward officer whose coverage area contains this location
     const assigneeResult = await db.query(
       `SELECT u.id, u.name, u.email
        FROM users u
@@ -59,10 +51,8 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
       console.log(`Issue assigned to ward officer: ${assigneeResult.rows[0].name}`);
     }
 
-    // Log the submission event
     await db.query(
-      `INSERT INTO issue_events 
-        (issue_id, event_type, new_status, triggered_by)
+      `INSERT INTO issue_events (issue_id, event_type, new_status, triggered_by)
        VALUES ($1, 'submitted', 'submitted', $2)`,
       [newIssue.id, req.user.userId]
     );
@@ -85,8 +75,7 @@ router.get('/', async (req, res) => {
 
     if (west && south && east && north) {
       query = `
-        SELECT 
-          id, title, category, status, upvote_count,
+        SELECT id, title, category, status, upvote_count,
           ST_Y(location::geometry) AS lat,
           ST_X(location::geometry) AS lng,
           created_at
@@ -98,8 +87,7 @@ router.get('/', async (req, res) => {
       params = [west, south, east, north];
     } else {
       query = `
-        SELECT 
-          id, title, category, status, upvote_count,
+        SELECT id, title, category, status, upvote_count,
           ST_Y(location::geometry) AS lat,
           ST_X(location::geometry) AS lng,
           created_at
@@ -131,15 +119,14 @@ router.get('/clusters', async (req, res) => {
     const result = await db.query(
       `SELECT
         cluster_id,
-        COUNT(*)                                                    AS report_count,
-        ST_Y(ST_Centroid(ST_Collect(location::geometry)))           AS lat,
-        ST_X(ST_Centroid(ST_Collect(location::geometry)))           AS lng,
-        MODE() WITHIN GROUP (ORDER BY category)                     AS dominant_category,
-        MAX(created_at)                                             AS latest_report,
-        SUM(upvote_count)                                           AS total_upvotes
+        COUNT(*) AS report_count,
+        ST_Y(ST_Centroid(ST_Collect(location::geometry))) AS lat,
+        ST_X(ST_Centroid(ST_Collect(location::geometry))) AS lng,
+        MODE() WITHIN GROUP (ORDER BY category) AS dominant_category,
+        MAX(created_at) AS latest_report,
+        SUM(upvote_count) AS total_upvotes
        FROM (
-         SELECT
-           id, category, location, created_at, upvote_count,
+         SELECT id, category, location, created_at, upvote_count,
            ST_ClusterDBSCAN(location::geometry, eps := 0.0005, minpoints := 2)
              OVER () AS cluster_id
          FROM issues
@@ -161,8 +148,6 @@ router.get('/clusters', async (req, res) => {
 });
 
 // GET /api/issues/:id - Get single issue with full details
-router.get('/:id', async (req, res) => {
-  // GET /api/issues/:id - Get single issue with full details
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -204,6 +189,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 // POST /api/issues/:id/upvote
 router.post('/:id/upvote', authenticateToken, async (req, res) => {
   const { id } = req.params;

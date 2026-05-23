@@ -108,5 +108,55 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+// OFFICIAL REGISTER - POST /api/auth/register-official
+router.post('/register-official', async (req, res) => {
+  const { name, email, password, secretCode } = req.body;
+
+  // Validate secret code
+  if (secretCode !== 'GOV-CIVIC-2026') {
+    return res.status(403).json({ error: 'Invalid authorization code' });
+  }
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email and password are required' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+
+  try {
+    const existingUser = await db.query(
+      'SELECT id FROM users WHERE email = $1', [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    const result = await db.query(
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ($1, $2, $3, 'official')
+       RETURNING id, name, email, role, created_at`,
+      [name, email, password_hash]
+    );
+
+    const user = result.rows[0];
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    res.status(201).json({ token, user });
+
+  } catch (err) {
+    console.error('Official register error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 module.exports = router;
