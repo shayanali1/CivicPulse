@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
 
 const CATEGORY_CONFIG = {
@@ -225,6 +226,88 @@ export default function DashboardPage() {
                         <div className="w-8 text-sm font-bold text-gray-900 dark:text-[#dae2fd] text-right">{cat.count}</div>
                       </div>
                     ))}
+                  </div>
+                </div>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Pie Chart - Issues by Category */}
+                  <div className="bg-white dark:bg-[#171f33] border border-gray-200 dark:border-[#424754] rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-[#dae2fd] mb-6" style={{ fontFamily: 'Hanken Grotesk' }}>
+                      Category Distribution
+                    </h2>
+                    {issues.length === 0 ? (
+                      <div className="flex items-center justify-center h-48">
+                        <p className="text-gray-400 text-sm">No data yet</p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={categoryCounts.filter(c => c.count > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={90}
+                            paddingAngle={3}
+                            dataKey="count"
+                          >
+                            {categoryCounts.filter(c => c.count > 0).map((entry) => (
+                              <Cell key={entry.key} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: isDark ? '#171f33' : '#ffffff',
+                              border: `1px solid ${isDark ? '#424754' : '#e5e7eb'}`,
+                              borderRadius: '8px',
+                              color: isDark ? '#dae2fd' : '#1f2937'
+                            }}
+                          />
+                          <Legend
+                            formatter={(value) => (
+                              <span style={{ color: isDark ? '#c2c6d6' : '#6b7280', fontSize: '12px' }}>{value}</span>
+                            )}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  {/* Bar Chart - Resolution Rate */}
+                  <div className="bg-white dark:bg-[#171f33] border border-gray-200 dark:border-[#424754] rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-[#dae2fd] mb-6" style={{ fontFamily: 'Hanken Grotesk' }}>
+                      Issue Status Overview
+                    </h2>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={[
+                        { name: 'Submitted', count: issues.filter(i => i.status === 'submitted').length, fill: '#6B7280' },
+                        { name: 'In Review', count: issues.filter(i => i.status === 'under_review').length, fill: '#F59E0B' },
+                        { name: 'Escalated', count: issues.filter(i => i.status === 'escalated_l1' || i.status === 'escalated_l2').length, fill: '#EF4444' },
+                        { name: 'Resolved', count: issues.filter(i => i.status === 'resolved').length, fill: '#22C55E' },
+                      ]} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                        <XAxis dataKey="name" tick={{ fill: isDark ? '#c2c6d6' : '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: isDark ? '#c2c6d6' : '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#171f33' : '#ffffff',
+                            border: `1px solid ${isDark ? '#424754' : '#e5e7eb'}`,
+                            borderRadius: '8px',
+                            color: isDark ? '#dae2fd' : '#1f2937'
+                          }}
+                        />
+                        <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                          {[
+                            { fill: '#6B7280' },
+                            { fill: '#F59E0B' },
+                            { fill: '#EF4444' },
+                            { fill: '#22C55E' },
+                          ].map((entry, index) => (
+                            <Cell key={index} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
