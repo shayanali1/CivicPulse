@@ -1,12 +1,13 @@
 const express = require('express');
 const { db } = require('../db/client');
 const { authenticateToken } = require('../middleware/auth');
-
+const upload = require('../middleware/upload');
 const router = express.Router();
 
 // POST /api/issues - Submit a new issue
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, upload.single('photo'), async (req, res) => {
   const { title, description, category, lat, lng } = req.body;
+  const photo_url = req.file ? `/uploads/${req.file.filename}` : null;
 
   if (!title || !category || !lat || !lng) {
     return res.status(400).json({ 
@@ -28,13 +29,13 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
       `INSERT INTO issues 
-        (title, description, category, location, reporter_id)
+        (title, description, category, location, reporter_id, photo_url)
        VALUES 
-        ($1, $2, $3, ST_GeogFromText($4), $5)
+        ($1, $2, $3, ST_GeogFromText($4), $5, $6)
        RETURNING 
         id, title, description, category, status, 
-        upvote_count, created_at, location`,
-      [title, description, category, `POINT(${lng} ${lat})`, req.user.userId]
+        upvote_count, created_at, location, photo_url`,
+      [title, description, category, `POINT(${lng} ${lat})`, req.user.userId, photo_url]
     );
 
     const newIssue = result.rows[0];

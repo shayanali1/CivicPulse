@@ -79,6 +79,12 @@ async function migrate() {
   ON area_assignments USING GIST(coverage_area)
 `);
     console.log("✅ Area assignments index ready");
+    // Add photo_url column to issues table
+await db.query(`
+  ALTER TABLE issues 
+  ADD COLUMN IF NOT EXISTS photo_url TEXT
+`);
+console.log('✅ Photo URL column ready');
     console.log("🎉 Database migration complete!");
     process.exit(0);
   } catch (err) {

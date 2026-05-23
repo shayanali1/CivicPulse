@@ -10,6 +10,8 @@ const issueRoutes = require('./routes/issues');
 const { authenticateToken } = require('./middleware/auth');
 const { runEscalationCheck } = require('./workers/escalationEngine');
 const rateLimit = require('express-rate-limit');
+// Serve uploaded files as static files
+
 
 // General rate limit — 100 requests per 15 minutes per IP
 const generalLimiter = rateLimit({
@@ -33,6 +35,7 @@ app.use(cors());
 app.use(express.json());
 app.use(generalLimiter);
 app.use('/api/auth', authLimiter);
+app.use('/uploads', express.static('uploads'));
 
 // Test database connection on startup
 db.query('SELECT NOW()', (err, result) => {
