@@ -231,5 +231,55 @@ router.post('/:id/upvote', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+// PATCH /api/issues/:id/status - Update issue status (officials only)
+router.patch('/:id/status', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { status, note } = req.body;
+  const userId = req.user.userId;
 
+  const validStatuses = ['submitted', 'under_review', 'escalated_l1', 'escalated_l2', 'resolved'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  try {
+    // Get current issue
+    const current = await db.query(
+      'SELECT status, is_resolved FROM issues WHERE id = $1',
+      [id]
+    );
+
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
+
+    const oldStatus = current.rows[0].status;
+    const isResolved = status === 'resolved';
+
+    // Update issue status
+    await db.query(
+      `UPDATE issues 
+       SET status = $1,
+           last_status_changed_at = NOW(),
+           is_resolved = $2,
+           resolved_at = $3
+       WHERE id = $4`,
+      [status, isResolved, isResolved ? new Date() : null, id]
+    );
+
+    // Log the status change event
+    await db.query(
+      `INSERT INTO issue_events
+        (issue_id, event_type, old_status, new_status, triggered_by, note)
+       VALUES ($1, 'status_change', $2, $3, $4, $5)`,
+      [id, oldStatus, status, userId, note || null]
+    );
+
+    res.json({ message: 'Status updated successfully', status });
+
+  } catch (err) {
+    console.error('Update status error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 module.exports = router;
