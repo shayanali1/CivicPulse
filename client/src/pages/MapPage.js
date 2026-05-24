@@ -65,6 +65,8 @@ export default function MapPage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedIssue, setSelectedIssue] = useState(null);
   const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
   useEffect(() => {
     fetchIssues();
@@ -80,18 +82,46 @@ export default function MapPage() {
       setLoading(false);
     }
   };
+const handleSearch = async (query) => {
+  setSearchQuery(query);
+
+  if (searchTimeout) clearTimeout(searchTimeout);
+
+  if (query.trim().length < 2) {
+    fetchIssues();
+    return;
+  }
+
+  const timeout = setTimeout(async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/issues/search?q=${encodeURIComponent(query)}`);
+      setIssues(res.data);
+    } catch (err) {
+      console.error('Search failed:', err);
+    }
+  }, 500);
+
+  setSearchTimeout(timeout);
+};
 
   const handleLogout = () => {
+  
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/');
   };
 
-  const filteredIssues = issues.filter((issue) => {
-    const categoryMatch = selectedCategory === 'all' || issue.category === selectedCategory;
-    const statusMatch = selectedStatus === 'all' || issue.status === selectedStatus;
-    return categoryMatch && statusMatch;
-  });
+ const filteredIssues = searchQuery.trim().length >= 2
+  ? issues.filter((issue) => {
+      const categoryMatch = selectedCategory === 'all' || issue.category === selectedCategory;
+      const statusMatch = selectedStatus === 'all' || issue.status === selectedStatus;
+      return categoryMatch && statusMatch;
+    })
+  : issues.filter((issue) => {
+      const categoryMatch = selectedCategory === 'all' || issue.category === selectedCategory;
+      const statusMatch = selectedStatus === 'all' || issue.status === selectedStatus;
+      return categoryMatch && statusMatch;
+    });
 
   const tileUrl = isDark
     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -133,14 +163,24 @@ export default function MapPage() {
             </div>
 
             {/* Center: Search */}
-            <div className="flex-1 max-w-md mx-4 hidden md:block">
+           <div className="flex-1 max-w-md mx-4 hidden md:block">
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
                 <input
                   type="text"
                   placeholder="Search issues..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
                   className="w-full bg-gray-100 dark:bg-[#171f33] border border-gray-200 dark:border-[#424754] rounded-xl pl-9 pr-4 py-2 text-sm text-gray-900 dark:text-[#dae2fd] placeholder-gray-400 focus:border-blue-500 outline-none transition-colors"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => { setSearchQuery(''); fetchIssues(); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <span className="material-symbols-outlined text-gray-400 text-[16px]">close</span>
+                  </button>
+                )}
               </div>
             </div>
 

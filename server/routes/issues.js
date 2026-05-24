@@ -147,6 +147,40 @@ router.get('/clusters', async (req, res) => {
   }
 });
 
+// GET /api/issues/search - MUST be before /:id route
+// GET /api/issues/search - MUST be before /:id route
+router.get('/search', async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || q.trim().length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT 
+        id, title, category, status, upvote_count,
+        ST_Y(location::geometry) AS lat,
+        ST_X(location::geometry) AS lng,
+        created_at
+       FROM issues
+       WHERE 
+         title ILIKE $1 
+         OR description ILIKE $1
+         OR category ILIKE $1
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [`%${q.trim()}%`]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error('Search error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/issues/:id - Get single issue with full details
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
@@ -231,7 +265,8 @@ router.post('/:id/upvote', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-// PATCH /api/issues/:id/status - Update issue status (officials only)
+
+// PATCH /api/issues/:id/status - Update issue status
 router.patch('/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { status, note } = req.body;
@@ -243,10 +278,8 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
   }
 
   try {
-    // Get current issue
     const current = await db.query(
-      'SELECT status, is_resolved FROM issues WHERE id = $1',
-      [id]
+      'SELECT status, is_resolved FROM issues WHERE id = $1', [id]
     );
 
     if (current.rows.length === 0) {
@@ -256,18 +289,14 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
     const oldStatus = current.rows[0].status;
     const isResolved = status === 'resolved';
 
-    // Update issue status
     await db.query(
       `UPDATE issues 
-       SET status = $1,
-           last_status_changed_at = NOW(),
-           is_resolved = $2,
-           resolved_at = $3
+       SET status = $1, last_status_changed_at = NOW(),
+           is_resolved = $2, resolved_at = $3
        WHERE id = $4`,
       [status, isResolved, isResolved ? new Date() : null, id]
     );
 
-    // Log the status change event
     await db.query(
       `INSERT INTO issue_events
         (issue_id, event_type, old_status, new_status, triggered_by, note)
@@ -282,4 +311,5 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 module.exports = router;
