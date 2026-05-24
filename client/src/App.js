@@ -10,12 +10,13 @@ import IssueDetailPage from './pages/IssueDetailPage';
 import DashboardPage from './pages/DashboardPage';
 import MobileNav from './components/MobileNav';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './components/Toast';
 import { CitizenRoute, OfficialRoute, AuthRoute } from './components/ProtectedRoute';
 
 function AppContent() {
   const location = useLocation();
   const hideNavOn = ['/', '/login', '/register'];
-  const isHidden = hideNavOn.includes(location.pathname) || 
+  const isHidden = hideNavOn.includes(location.pathname) ||
     location.pathname.startsWith('/register/');
 
   return (
@@ -38,9 +39,11 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <ToastProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

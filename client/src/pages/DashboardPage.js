@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
+import { useToast } from '../components/Toast';
 import {
   PieChart,
   Pie,
@@ -591,24 +592,26 @@ export default function DashboardPage() {
 function IssuesTable({ issues, formatDate, onStatusUpdate }) {
   const [updatingId, setUpdatingId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState({});
+  const { addToast } = useToast();
 
   const handleStatusUpdate = async (issueId, newStatus) => {
     setUpdatingId(issueId);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
       await axios.patch(
         `http://localhost:5000/api/issues/${issueId}/status`,
         { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       onStatusUpdate();
+      addToast(`Status updated to ${newStatus.replace(/_/g, ' ')}`, 'success');
     } catch (err) {
-      console.error("Failed to update status:", err);
+      console.error('Failed to update status:', err);
+      addToast('Failed to update status', 'error');
     } finally {
       setUpdatingId(null);
     }
   };
-
   if (issues.length === 0) {
     return (
       <div className="text-center py-12">

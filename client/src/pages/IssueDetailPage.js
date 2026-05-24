@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
+import { useToast } from '../components/Toast';
 
 const CATEGORY_CONFIG = {
   pothole: { color: '#EF4444', icon: 'road', label: 'Pothole' },
@@ -34,6 +35,7 @@ export default function IssueDetailPage() {
   const [loading, setLoading] = useState(true);
   const [upvoted, setUpvoted] = useState(false);
   const [upvoteCount, setUpvoteCount] = useState(0);
+  const { addToast } = useToast();
 
   useEffect(() => {
     fetchIssue();
@@ -68,15 +70,17 @@ const handleUpvote = async () => {
     if (res.data.upvoted) {
       setUpvoteCount(upvoteCount + 1);
       setUpvoted(true);
+      addToast('Upvote added!', 'success');
     } else {
       setUpvoteCount(upvoteCount - 1);
       setUpvoted(false);
+      addToast('Upvote removed!', 'info');
     }
   } catch (err) {
     console.error('Upvote failed:', err);
+    addToast('Failed to upvote', 'error');
   }
 };
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',

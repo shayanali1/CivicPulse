@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useToast } from '../components/Toast';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -36,6 +37,7 @@ function LocationPicker({ onLocationSelect }) {
 
 export default function ReportPage() {
   const { isDark, toggleTheme } = useTheme();
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [location, setLocation] = useState(null);
@@ -96,9 +98,10 @@ export default function ReportPage() {
           } 
         }
       );
+      addToast('Issue reported successfully! 🎉', 'success');
       navigate('/map');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit issue');
+      addToast(err.response?.data?.error || 'Failed to submit issue', 'error');
     } finally {
       setLoading(false);
     }
